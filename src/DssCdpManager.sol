@@ -139,9 +139,9 @@ contract DssCdpManager is DSNote {
         require(dst != owns[cdp], "dst-already-owner");
 
         // Remove transferred CDP from double linked list of origin user and pointers
-        if (list[cdp].prev != 0) {
+        // if (list[cdp].prev != 0) {
             list[list[cdp].prev].next = list[cdp].next;         // Set the next pointer of the prev cdp (if exists) to the next of the transferred one
-        }
+        // }
         if (list[cdp].next != 0) {                              // If wasn't the last one
             list[list[cdp].next].prev = list[cdp].prev;         // Set the prev pointer of the next cdp to the prev of the transferred one
         } else {                                                // If was the last one
