@@ -19,6 +19,11 @@ contract RootLike {
     function mail(bytes32,address,int,int) external returns (bool);
 }
 
+contract GemLike {
+    function transfer(address,uint) external returns (bool);
+    function transferFrom(address,address,uint) external returns (bool);
+}
+
 contract UrnHandler {
     constructor(address vat) public {
         VatLike(vat).hope(msg.sender);
@@ -69,6 +74,7 @@ contract MrsCdpManager is LibNote {
     }
 
     event NewCdp(address indexed usr, address indexed own, uint indexed cdp);
+    event Claim(address indexed usr, address indexed own, address[] tkns, uint256[] vals);
 
     modifier cdpAllowed(
         uint cdp
@@ -333,7 +339,10 @@ contract MrsCdpManager is LibNote {
         address lad
     ) public note cdpAllowed(cdp) {
         address who = (lad != address(0)) lad : msg.sender;
-        (address[] memory tkns, uint256[] memory wads) = purse.claim(ilks[cdp], urns[cdp]);
-
+        (address[] memory tkns, uint256[] memory vals) = purse.claim(ilks[cdp], urns[cdp]);
+        for (uint i = 0; i < tkns.length; i++) {
+          GemLike(tkns[i]).transfer(who, vals[i]);
+        }
+        emit Claim(msg.sender, who, tkns, vals);
     }
 }
