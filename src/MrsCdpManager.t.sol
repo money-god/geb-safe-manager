@@ -1,6 +1,6 @@
-pragma solidity ^0.5.12;
+pragma solidity ^0.5.15;
 
-import { DssDeployTestBase, Vat } from "dss-deploy/DssDeploy.t.base.sol";
+import { MrsDeployTestBase, Vat } from "mrs-deploy/MrsDeploy.t.base.sol";
 import "./GetCdps.sol";
 
 contract FakeUser {

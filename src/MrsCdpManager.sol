@@ -1,6 +1,6 @@
-pragma solidity ^0.5.12;
+pragma solidity ^0.5.15;
 
-import { LibNote } from "dss/lib.sol";
+import { LibNote } from "mrs/lib.sol";
 
 contract VatLike {
     function urns(bytes32, address) public view returns (uint, uint);
@@ -11,13 +11,30 @@ contract VatLike {
     function fork(bytes32, address, address, int, int) public;
 }
 
+contract PurseLike {
+    function claim(bytes32,address) external returns (address[],uint256[]);
+}
+
+contract RootLike {
+    function mail(bytes32,address,int,int) external returns (bool);
+}
+
 contract UrnHandler {
     constructor(address vat) public {
         VatLike(vat).hope(msg.sender);
     }
 }
 
-contract DssCdpManager is LibNote {
+contract MrsCdpManager is LibNote {
+    // --- Auth ---
+    mapping (address => uint) public wards;
+    function rely(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 1; }
+    function deny(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 0; }
+    modifier auth {
+        require(wards[msg.sender] == 1, "Vat/not-authorized");
+        _;
+    }
+
     address                   public vat;
     uint                      public cdpi;      // Auto incremental
     mapping (uint => address) public urns;      // CDPId => UrnHandler
@@ -43,6 +60,9 @@ contract DssCdpManager is LibNote {
         )
     ) public urnCan;                            // Urn => Allowed Addr => True/False
 
+    PurseLike public purse;
+    RootLike  public root;
+
     struct List {
         uint prev;
         uint next;
@@ -65,9 +85,11 @@ contract DssCdpManager is LibNote {
     }
 
     constructor(address vat_) public {
+        wards[msg.sender] = 1;
         vat = vat_;
     }
 
+    // --- Math ---
     function add(uint x, uint y) internal pure returns (uint z) {
         require((z = x + y) >= x);
     }
@@ -81,6 +103,43 @@ contract DssCdpManager is LibNote {
         require(y >= 0);
     }
 
+    // --- Administration ---
+    function file(bytes32 what, address addr) external note auth {
+        if (what == "purse") purse = PurseLike(addr);
+        else if (what == "root") root = RootLike(addr);
+        else revert("MrsCdpManager/file-unrecognized-param");
+    }
+
+    // --- Root Utils ---
+    function solo(
+      bytes32 ilk,
+      address src,
+      int dink,
+      int dart
+    ) internal {
+      //TODO: try/catch
+      if (address(root) != address(0)) {
+        root.mail(ilk, urn, dink, dart);
+      }
+    }
+
+    function group(
+      bytes32 ilk,
+      address src,
+      address dst,
+      int srcInk,
+      int dstInk,
+      int srcArt,
+      int dstArt
+    ) internal {
+      //TODO: try/catch
+      if (address(root) != address(0)) {
+        root.mail(ilk, src, srcInk, srcArt);
+        root.mail(ilk, dst, dstInk, dstArt);
+      }
+    }
+
+    // --- CDP Manipulation ---
     // Allow/disallow a usr address to manage the cdp.
     function cdpAllow(
         uint cdp,
@@ -163,7 +222,7 @@ contract DssCdpManager is LibNote {
         count[dst] = add(count[dst], 1);
     }
 
-    // Frob the cdp keeping the generated DAI or collateral freed in the cdp urn address.
+    // Frob the cdp keeping the generated MAI or collateral freed in the cdp urn address.
     function frob(
         uint cdp,
         int dink,
@@ -178,6 +237,7 @@ contract DssCdpManager is LibNote {
             dink,
             dart
         );
+        solo(ilks[cdp], urn, dink, dart);
     }
 
     // Transfer wad amount of cdp collateral from the cdp address to a dst address.
@@ -187,6 +247,7 @@ contract DssCdpManager is LibNote {
         uint wad
     ) public note cdpAllowed(cdp) {
         VatLike(vat).flux(ilks[cdp], urns[cdp], dst, wad);
+        group(ilks[cdp], urns[cdp], dst, int(-wad), 0, int(wad), 0);
     }
 
     // Transfer wad amount of any type of collateral (ilk) from the cdp address to a dst address.
@@ -198,15 +259,17 @@ contract DssCdpManager is LibNote {
         uint wad
     ) public note cdpAllowed(cdp) {
         VatLike(vat).flux(ilk, urns[cdp], dst, wad);
+        group(ilks[cdp], urns[cdp], dst, int(-wad), 0, int(wad), 0);
     }
 
-    // Transfer wad amount of DAI from the cdp address to a dst address.
+    // Transfer wad amount of MAI from the cdp address to a dst address.
     function move(
         uint cdp,
         address dst,
         uint rad
     ) public note cdpAllowed(cdp) {
         VatLike(vat).move(urns[cdp], dst, rad);
+        group(ilks[cdp], urns[cdp], dst, 0, int(-wad), 0, int(wad));
     }
 
     // Quit the system, migrating the cdp (ink, art) to a different dst urn
@@ -215,13 +278,16 @@ contract DssCdpManager is LibNote {
         address dst
     ) public note cdpAllowed(cdp) urnAllowed(dst) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urns[cdp]);
+        uint dink = toInt(ink);
+        uint dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdp],
             urns[cdp],
             dst,
-            toInt(ink),
-            toInt(art)
+            dink,
+            dart
         );
+        group(ilks[cdp], urns[cdp], dst, -dink, -dart, dink, dart);
     }
 
     // Import a position from src urn to the urn owned by cdp
@@ -230,13 +296,16 @@ contract DssCdpManager is LibNote {
         uint cdp
     ) public note urnAllowed(src) cdpAllowed(cdp) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], src);
+        uint dink = toInt(ink);
+        uint dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdp],
             src,
             urns[cdp],
-            toInt(ink),
-            toInt(art)
+            dink,
+            dart
         );
+        group(ilks[cdp], src, urns[cdp], -dink, -dart, dink, dart);
     }
 
     // Move a position from cdpSrc urn to the cdpDst urn
@@ -246,6 +315,8 @@ contract DssCdpManager is LibNote {
     ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         require(ilks[cdpSrc] == ilks[cdpDst], "non-matching-cdps");
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdpSrc], urns[cdpSrc]);
+        uint dink = toInt(ink);
+        uint dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdpSrc],
             urns[cdpSrc],
@@ -253,5 +324,16 @@ contract DssCdpManager is LibNote {
             toInt(ink),
             toInt(art)
         );
+        group(ilks[cdpSrc], urns[cdpSrc], urns[cdpDst], -dink, -dart, dink, dart);
+    }
+
+    // Claim rewards for good cdp management
+    function claim(
+        uint cdp,
+        address lad
+    ) public note cdpAllowed(cdp) {
+        address who = (lad != address(0)) lad : msg.sender;
+        (address[] memory tkns, uint256[] memory wads) = purse.claim(ilks[cdp], urns[cdp]);
+
     }
 }
