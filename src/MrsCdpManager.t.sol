@@ -1,12 +1,64 @@
 pragma solidity ^0.5.15;
 
-import { MrsDeployTestBase, Vat } from "mrs-deploy/MrsDeploy.t.base.sol";
+import { MrsDeployTestBase, Vat, DSToken } from "mrs-deploy/MrsDeploy.t.base.sol";
 import "./GetCdps.sol";
+
+contract FakePurse {
+    address public gem1;
+    address public gem2;
+
+    uint256 public qty;
+
+    constructor(
+      address gem1_,
+      address gem2_,
+      uint256 qty_
+    ) public {
+        gem1 = gem1_;
+        gem2 = gem2_;
+        qty  = qty_;
+    }
+
+    function claim(bytes32 ilk, address urn, address lad) external returns (bool) {
+        if (lad == address(0)) return false;
+        DSToken(gem1).transfer(lad, qty);
+        DSToken(gem2).transfer(lad, qty);
+        return true;
+    }
+}
+
+contract FakeRoot {
+    struct Urn {
+      uint ink;
+      uint art;
+    }
+
+    mapping(bytes32 => mapping(address => Urn)) public urns;
+
+    constructor() public {}
+
+    // --- Math ---
+    function add(uint x, int y) internal pure returns (uint z) {
+        z = x + uint(y);
+        require(y >= 0 || z <= x);
+        require(y <= 0 || z >= x);
+    }
+    function sub(uint x, int y) internal pure returns (uint z) {
+        z = x - uint(y);
+        require(y <= 0 || z <= x);
+        require(y >= 0 || z >= x);
+    }
+
+    function mail(bytes32 ilk, address urn, int dink, int dart) external {
+        urns[ilk][urn].ink = add(urns[ilk][urn].ink, dink);
+        urns[ilk][urn].art = add(urns[ilk][urn].art, dart);
+    }
+}
 
 contract FakeUser {
 
     function doCdpAllow(
-        DssCdpManager manager,
+        MrsCdpManager manager,
         uint cdp,
         address usr,
         uint ok
@@ -15,7 +67,7 @@ contract FakeUser {
     }
 
     function doUrnAllow(
-        DssCdpManager manager,
+        MrsCdpManager manager,
         address usr,
         uint ok
     ) public {
@@ -23,7 +75,7 @@ contract FakeUser {
     }
 
     function doGive(
-        DssCdpManager manager,
+        MrsCdpManager manager,
         uint cdp,
         address dst
     ) public {
@@ -31,7 +83,7 @@ contract FakeUser {
     }
 
     function doFrob(
-        DssCdpManager manager,
+        MrsCdpManager manager,
         uint cdp,
         int dink,
         int dart
@@ -59,17 +111,84 @@ contract FakeUser {
     }
 }
 
-contract DssCdpManagerTest is DssDeployTestBase {
-    DssCdpManager manager;
-    GetCdps getCdps;
-    FakeUser user;
+contract MrsCdpManagerTest is MrsDeployTestBase {
+    MrsCdpManager manager;
+    GetCdps   getCdps;
+    FakeUser  user;
+
+    DSToken   tkn1;
+    DSToken   tkn2;
+
+    FakeRoot  root;
+    FakePurse purse;
 
     function setUp() public {
         super.setUp();
         deploy();
-        manager = new DssCdpManager(address(vat));
+        manager = new MrsCdpManager(address(vat));
         getCdps = new GetCdps();
         user = new FakeUser();
+
+        // Incentive system setup
+        tkn1 = new DSToken('ONE');
+        tkn2 = new DSToken('TWO');
+
+        purse = new FakePurse(address(tkn1), address(tkn2), 1 ether);
+        root  = new FakeRoot();
+
+        tkn1.mint(100 ether);
+        tkn2.mint(100 ether);
+
+        tkn1.push(address(purse), 100 ether);
+        tkn2.push(address(purse), 100 ether);
+    }
+
+    function testFileParams() public {
+        manager.file("purse", address(purse));
+        manager.file("root", address(root));
+
+        assertTrue(address(manager.purse()) == address(purse));
+        assertTrue(address(manager.root()) == address(root));
+    }
+
+    function testMailing() public {
+        manager.file("root", address(root));
+
+        uint cdp = manager.open("ETH", address(this));
+        weth.deposit.value(1 ether)();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.urns(cdp), 1 ether);
+
+        (uint ink, uint art) = root.urns(manager.ilks(cdp), manager.urns(cdp));
+        assertEq(ink, 0);
+        assertEq(art, 0);
+
+        manager.frob(cdp, 1 ether, 50 ether);
+        (ink, art) = root.urns(manager.ilks(cdp), manager.urns(cdp));
+        assertEq(ink, 1 ether);
+        assertEq(art, 50 ether);
+    }
+
+    function testClaimingZeroAddress() public {
+        manager.file("purse", address(purse));
+
+        uint cdp = manager.open("ETH", address(this));
+        manager.claim(cdp, address(0));
+
+        assertEq(DSToken(purse.gem1()).balanceOf(address(this)), 1 ether);
+        assertEq(DSToken(purse.gem2()).balanceOf(address(this)), 1 ether);
+    }
+
+    function testClaimingOtherAddress() public {
+        address alice = address(0x1234);
+
+        manager.file("purse", address(purse));
+
+        uint cdp = manager.open("ETH", address(this));
+        manager.claim(cdp, alice);
+
+        assertEq(DSToken(purse.gem1()).balanceOf(alice), 1 ether);
+        assertEq(DSToken(purse.gem2()).balanceOf(alice), 1 ether);
     }
 
     function testOpenCDP() public {
@@ -285,15 +404,15 @@ contract DssCdpManagerTest is DssDeployTestBase {
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.frob(cdp, 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
-        assertEq(vat.dai(address(this)), 0);
+        assertEq(vat.mai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.mai(address(this)), 0);
         manager.move(cdp, address(this), 50 ether * ONE);
-        assertEq(vat.dai(manager.urns(cdp)), 0);
-        assertEq(vat.dai(address(this)), 50 ether * ONE);
-        assertEq(dai.balanceOf(address(this)), 0);
-        vat.hope(address(daiJoin));
-        daiJoin.exit(address(this), 50 ether);
-        assertEq(dai.balanceOf(address(this)), 50 ether);
+        assertEq(vat.mai(manager.urns(cdp)), 0);
+        assertEq(vat.mai(address(this)), 50 ether * ONE);
+        assertEq(mai.balanceOf(address(this)), 0);
+        vat.hope(address(maiJoin));
+        maiJoin.exit(address(this), 50 ether);
+        assertEq(mai.balanceOf(address(this)), 50 ether);
     }
 
     function testFrobAllowed() public {
@@ -303,7 +422,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.cdpAllow(cdp, address(user), 1);
         user.doFrob(manager, cdp, 1 ether, 50 ether);
-        assertEq(vat.dai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.mai(manager.urns(cdp)), 50 ether * ONE);
     }
 
     function testFailFrobNotAllowed() public {
@@ -321,7 +440,7 @@ contract DssCdpManagerTest is DssDeployTestBase {
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.frob(cdp, 1 ether, 50 ether);
         manager.frob(cdp, -int(1 ether), -int(50 ether));
-        assertEq(vat.dai(address(this)), 0);
+        assertEq(vat.mai(address(this)), 0);
         assertEq(vat.gem("ETH", manager.urns(cdp)), 1 ether);
         assertEq(vat.gem("ETH", address(this)), 0);
         manager.flux(cdp, address(this), 1 ether);

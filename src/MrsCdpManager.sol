@@ -12,11 +12,11 @@ contract VatLike {
 }
 
 contract PurseLike {
-    function claim(bytes32,address) external returns (address[],uint256[]);
+    function claim(bytes32,address,address) external returns (bool);
 }
 
 contract RootLike {
-    function mail(bytes32,address,int,int) external returns (bool);
+    function mail(bytes32,address,int,int) external;
 }
 
 contract GemLike {
@@ -33,8 +33,8 @@ contract UrnHandler {
 contract MrsCdpManager is LibNote {
     // --- Auth ---
     mapping (address => uint) public wards;
-    function rely(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 1; }
-    function deny(address usr) external note auth { require(live == 1, "Vat/not-live"); wards[usr] = 0; }
+    function rely(address usr) external note auth { wards[usr] = 1; }
+    function deny(address usr) external note auth { wards[usr] = 0; }
     modifier auth {
         require(wards[msg.sender] == 1, "Vat/not-authorized");
         _;
@@ -74,7 +74,7 @@ contract MrsCdpManager is LibNote {
     }
 
     event NewCdp(address indexed usr, address indexed own, uint indexed cdp);
-    event Claim(address indexed usr, address indexed own, address[] tkns, uint256[] vals);
+    event Claim(address indexed usr, address indexed own, bytes32, address);
 
     modifier cdpAllowed(
         uint cdp
@@ -119,7 +119,7 @@ contract MrsCdpManager is LibNote {
     // --- Root Utils ---
     function solo(
       bytes32 ilk,
-      address src,
+      address urn,
       int dink,
       int dart
     ) internal {
@@ -268,14 +268,14 @@ contract MrsCdpManager is LibNote {
         group(ilks[cdp], urns[cdp], dst, int(-wad), 0, int(wad), 0);
     }
 
-    // Transfer wad amount of MAI from the cdp address to a dst address.
+    // Transfer rad amount of MAI from the cdp address to a dst address.
     function move(
         uint cdp,
         address dst,
         uint rad
     ) public note cdpAllowed(cdp) {
         VatLike(vat).move(urns[cdp], dst, rad);
-        group(ilks[cdp], urns[cdp], dst, 0, int(-wad), 0, int(wad));
+        group(ilks[cdp], urns[cdp], dst, 0, int(-rad), 0, int(rad));
     }
 
     // Quit the system, migrating the cdp (ink, art) to a different dst urn
@@ -284,8 +284,8 @@ contract MrsCdpManager is LibNote {
         address dst
     ) public note cdpAllowed(cdp) urnAllowed(dst) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], urns[cdp]);
-        uint dink = toInt(ink);
-        uint dart = toInt(art);
+        int dink = toInt(ink);
+        int dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdp],
             urns[cdp],
@@ -302,8 +302,8 @@ contract MrsCdpManager is LibNote {
         uint cdp
     ) public note urnAllowed(src) cdpAllowed(cdp) {
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdp], src);
-        uint dink = toInt(ink);
-        uint dart = toInt(art);
+        int dink = toInt(ink);
+        int dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdp],
             src,
@@ -321,14 +321,14 @@ contract MrsCdpManager is LibNote {
     ) public note cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         require(ilks[cdpSrc] == ilks[cdpDst], "non-matching-cdps");
         (uint ink, uint art) = VatLike(vat).urns(ilks[cdpSrc], urns[cdpSrc]);
-        uint dink = toInt(ink);
-        uint dart = toInt(art);
+        int dink = toInt(ink);
+        int dart = toInt(art);
         VatLike(vat).fork(
             ilks[cdpSrc],
             urns[cdpSrc],
             urns[cdpDst],
-            toInt(ink),
-            toInt(art)
+            dink,
+            dart
         );
         group(ilks[cdpSrc], urns[cdpSrc], urns[cdpDst], -dink, -dart, dink, dart);
     }
@@ -338,11 +338,8 @@ contract MrsCdpManager is LibNote {
         uint cdp,
         address lad
     ) public note cdpAllowed(cdp) {
-        address who = (lad != address(0)) lad : msg.sender;
-        (address[] memory tkns, uint256[] memory vals) = purse.claim(ilks[cdp], urns[cdp]);
-        for (uint i = 0; i < tkns.length; i++) {
-          GemLike(tkns[i]).transfer(who, vals[i]);
-        }
-        emit Claim(msg.sender, who, tkns, vals);
+        address who = (lad != address(0)) ? lad : msg.sender;
+        require(purse.claim(ilks[cdp], urns[cdp], who) == true, "MrsCdpManager/cannot-claim");
+        emit Claim(msg.sender, who, ilks[cdp], urns[cdp]);
     }
 }
