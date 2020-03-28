@@ -124,7 +124,7 @@ contract MrsCdpManagerTest is MrsDeployTestBase {
 
     function setUp() public {
         super.setUp();
-        deploy();
+        deployBond();
         manager = new MrsCdpManager(address(vat));
         getCdps = new GetCdps();
         user = new FakeUser();
@@ -404,15 +404,15 @@ contract MrsCdpManagerTest is MrsDeployTestBase {
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.frob(cdp, 1 ether, 50 ether);
-        assertEq(vat.mai(manager.urns(cdp)), 50 ether * ONE);
-        assertEq(vat.mai(address(this)), 0);
+        assertEq(vat.good(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.good(address(this)), 0);
         manager.move(cdp, address(this), 50 ether * ONE);
-        assertEq(vat.mai(manager.urns(cdp)), 0);
-        assertEq(vat.mai(address(this)), 50 ether * ONE);
-        assertEq(mai.balanceOf(address(this)), 0);
-        vat.hope(address(maiJoin));
-        maiJoin.exit(address(this), 50 ether);
-        assertEq(mai.balanceOf(address(this)), 50 ether);
+        assertEq(vat.good(manager.urns(cdp)), 0);
+        assertEq(vat.good(address(this)), 50 ether * ONE);
+        assertEq(coin.balanceOf(address(this)), 0);
+        vat.hope(address(coinJoin));
+        coinJoin.exit(address(this), 50 ether);
+        assertEq(coin.balanceOf(address(this)), 50 ether);
     }
 
     function testFrobAllowed() public {
@@ -422,7 +422,7 @@ contract MrsCdpManagerTest is MrsDeployTestBase {
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.cdpAllow(cdp, address(user), 1);
         user.doFrob(manager, cdp, 1 ether, 50 ether);
-        assertEq(vat.mai(manager.urns(cdp)), 50 ether * ONE);
+        assertEq(vat.good(manager.urns(cdp)), 50 ether * ONE);
     }
 
     function testFailFrobNotAllowed() public {
@@ -440,7 +440,7 @@ contract MrsCdpManagerTest is MrsDeployTestBase {
         ethJoin.join(manager.urns(cdp), 1 ether);
         manager.frob(cdp, 1 ether, 50 ether);
         manager.frob(cdp, -int(1 ether), -int(50 ether));
-        assertEq(vat.mai(address(this)), 0);
+        assertEq(vat.good(address(this)), 0);
         assertEq(vat.gem("ETH", manager.urns(cdp)), 1 ether);
         assertEq(vat.gem("ETH", address(this)), 0);
         manager.flux(cdp, address(this), 1 ether);

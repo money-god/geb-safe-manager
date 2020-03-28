@@ -228,7 +228,7 @@ contract MrsCdpManager is LibNote {
         count[dst] = add(count[dst], 1);
     }
 
-    // Frob the cdp keeping the generated MAI or collateral freed in the cdp urn address.
+    // Frob the cdp keeping the generated COIN or collateral freed in the cdp urn address.
     function frob(
         uint cdp,
         int dink,
@@ -268,7 +268,7 @@ contract MrsCdpManager is LibNote {
         group(ilks[cdp], urns[cdp], dst, int(-wad), 0, int(wad), 0);
     }
 
-    // Transfer rad amount of MAI from the cdp address to a dst address.
+    // Transfer rad amount of COIN from the cdp address to a dst address.
     function move(
         uint cdp,
         address dst,
