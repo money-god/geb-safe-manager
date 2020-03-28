@@ -36,7 +36,7 @@ contract MrsCdpManager is LibNote {
     function rely(address usr) external note auth { wards[usr] = 1; }
     function deny(address usr) external note auth { wards[usr] = 0; }
     modifier auth {
-        require(wards[msg.sender] == 1, "Vat/not-authorized");
+        require(wards[msg.sender] == 1, "not-authorized");
         _;
     }
 
@@ -113,7 +113,7 @@ contract MrsCdpManager is LibNote {
     function file(bytes32 what, address addr) external note auth {
         if (what == "purse") purse = PurseLike(addr);
         else if (what == "root") root = RootLike(addr);
-        else revert("MrsCdpManager/file-unrecognized-param");
+        else revert("file-unrecognized-param");
     }
 
     // --- Root Utils ---
@@ -339,7 +339,7 @@ contract MrsCdpManager is LibNote {
         address lad
     ) public note cdpAllowed(cdp) {
         address who = (lad != address(0)) ? lad : msg.sender;
-        require(purse.claim(ilks[cdp], urns[cdp], who) == true, "MrsCdpManager/cannot-claim");
+        require(purse.claim(ilks[cdp], urns[cdp], who) == true, "cannot-claim");
         emit Claim(msg.sender, who, ilks[cdp], urns[cdp]);
     }
 }
