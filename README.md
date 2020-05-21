@@ -10,7 +10,7 @@
 - `allowHandler(address usr, uint ok)`: Allow/Disallow (`ok`) `usr` to access `msg.sender` space (for sending a position in `quitSystem`).
 - `openCDP(bytes32 collateralType, address usr)`: Opens a new CDP for `usr` to be used for an `collateralType` collateral type.
 - `transferCDPOwnership(uint cdp, address dst)`: Transfers `cdp` to `dst`.
-- `modifyCDPCollateralization(uint cdp, int deltaCollateral, int deltaDebt)`: Increments/decrements the `deltaCollateral` amount of collateral locked and increments/decrements the `deltaDebt` amount of debt in the `cdp` depositing the generated MAI or collateral freed in the `cdp` address.
+- `modifyCDPCollateralization(uint cdp, int deltaCollateral, int deltaDebt)`: Increments/decrements the `deltaCollateral` amount of collateral locked and increments/decrements the `deltaDebt` amount of debt in the `cdp` depositing the generated debt or collateral freed in the `cdp` address.
 - `transferCollateral(bytes32 collateralType, uint cdp, address dst, uint wad)`: Moves `wad` (precision 18) amount of collateral `collateralType` from `cdp` to `dst`.
 - `transferCollateral(uint cdp, address dst, uint wad)`: Moves `wad` amount of `cdp` collateral from `cdp` to `dst`.
 - `transferInternalCoins(uint cdp, address dst, uint rad)`: Moves `rad` (precision 45) amount of internal coins from `cdp` to `dst`.
