@@ -1,3 +1,6 @@
 [submodule "lib/mrs-deploy"]
 	path = lib/mrs-deploy
 	url = https://github.com/sweatdao/mrs-deploy
+[submodule "lib/geb-deploy"]
+	path = lib/geb-deploy
+	url = https://github.com/reflexer-labs/geb-deploy.git

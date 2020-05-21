@@ -9,14 +9,14 @@
 - `cdpAllow(uint cdp, address usr, uint ok)`: Allow/Disallow (`ok`) `usr` to manage `cdp`.
 - `urnAllow(address usr, uint ok)`: Allow/Disallow (`ok`) `usr` to access `msg.sender` space (for sending a position in `quit`).
 - `open(bytes32 ilk, address usr)`: Opens a new CDP for `usr` to be used for an `ilk` collateral type.
-- `give(uint cdp, address dst)`: Transfers `cdp` to `dst`.
-- `frob(uint cdp, int dink, int dart)`: Increments/decrements the `dink` amount of collateral locked and increments/decrements the `dart` amount of debt in the `cdp` depositing the generated MAI or collateral freed in the `cdp` address.
+- `transferCDPOwnership(uint cdp, address dst)`: Transfers `cdp` to `dst`.
+- `modifyCDPCollateralization(uint cdp, int dink, int dart)`: Increments/decrements the `dink` amount of collateral locked and increments/decrements the `dart` amount of debt in the `cdp` depositing the generated MAI or collateral freed in the `cdp` address.
 - `flux(bytes32 ilk, uint cdp, address dst, uint wad)`: Moves `wad` (precision 18) amount of collateral `ilk` from `cdp` to `dst`.
 - `flux(uint cdp, address dst, uint wad)`: Moves `wad` amount of `cdp` collateral from `cdp` to `dst`.
 - `move(uint cdp, address dst, uint rad)`: Moves `rad` (precision 45) amount of MAI from `cdp` to `dst`.
-- `quit(uint cdp, address dst)`: Moves the collateral locked and debt generated from `cdp` to `dst`.
-- `enter(address src, uint cdp)`: Moves the collateral locked and debt generated from `src` to `cdp`.
-- `shift(uint cdpSrc, uint cdpDst)`: Moves the collateral locked and debt generated from `cdpSrc` to `cdpDst`.
+- `quitSystem(uint cdp, address dst)`: Moves the collateral locked and debt generated from `cdp` to `dst`.
+- `enterSystem(address src, uint cdp)`: Moves the collateral locked and debt generated from `src` to `cdp`.
+- `moveCDP(uint cdpSrc, uint cdpDst)`: Moves the collateral locked and debt generated from `cdpSrc` to `cdpDst`.
 - `claim(uint cdp, address lad)`: Claims rewards for good cdp management
 
 **Note:** `dst` refers to the destination address.
