@@ -23,7 +23,7 @@
 
 ## Storage Layout
 
-- `CDPEngine` : core contract address that holds the CDPs.
+- `cdpEngine` : core contract address that holds the CDPs.
 - `cdpi`: Auto incremental id.
 - `cdps`: Mapping `CDPId => CDPHandler`
 - `list`: Mapping `CDPId => Prev & Next CDPIds` (double linked list)
