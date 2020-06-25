@@ -13,26 +13,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.5.15;
+pragma solidity ^0.6.7;
 
 import { Logging } from "geb/Logging.sol";
 
-contract CDPEngineLike {
-    function cdps(bytes32, address) public view returns (uint, uint);
-    function approveCDPModification(address) public;
-    function transferCollateral(bytes32, address, address, uint) public;
-    function transferInternalCoins(address, address, uint) public;
-    function modifyCDPCollateralization(bytes32, address, address, address, int, int) public;
-    function transferCDPCollateralAndDebt(bytes32, address, address, int, int) public;
+abstract contract CDPEngineLike {
+    function cdps(bytes32, address) virtual public view returns (uint, uint);
+    function approveCDPModification(address) virtual public;
+    function transferCollateral(bytes32, address, address, uint) virtual public;
+    function transferInternalCoins(address, address, uint) virtual public;
+    function modifyCDPCollateralization(bytes32, address, address, address, int, int) virtual public;
+    function transferCDPCollateralAndDebt(bytes32, address, address, int, int) virtual public;
 }
 
-contract RewardDistributorLike {
-    function claimCDPManagementRewards(bytes32,address,address) external returns (bool);
-}
-
-contract CollateralLike {
-    function transfer(address,uint) external returns (bool);
-    function transferFrom(address,address,uint) external returns (bool);
+abstract contract CollateralLike {
+    function transfer(address,uint) virtual external returns (bool);
+    function transferFrom(address,address,uint) virtual external returns (bool);
 }
 
 contract CDPHandler {
@@ -42,30 +38,6 @@ contract CDPHandler {
 }
 
 contract GebCdpManager is Logging {
-    // --- Auth ---
-    mapping (address => uint) public authorizedAccounts;
-    /**
-    * @notice Add auth to an account
-    * @param account Account to add auth to
-    */
-    function addAuthorization(address account) external emitLog isAuthorized {
-        authorizedAccounts[account] = 1;
-    }
-    /**
-    * @notice Remove auth from an account
-    * @param account Account to remove auth from
-    */
-    function removeAuthorization(address account) external emitLog isAuthorized {
-        authorizedAccounts[account] = 0;
-    }
-    /**
-    * @notice Checks whether msg.sender can call an authed function
-    **/
-    modifier isAuthorized {
-        require(authorizedAccounts[msg.sender] == 1, "GebCdpManager/account-not-authorized");
-        _;
-    }
-
     address                   public cdpEngine;
     uint                      public cdpi;               // Auto incremental
     mapping (uint => address) public cdps;               // CDPId => CDPHandler
@@ -73,9 +45,9 @@ contract GebCdpManager is Logging {
     mapping (uint => address) public ownsCDP;            // CDPId => Owner
     mapping (uint => bytes32) public collateralTypes;    // CDPId => CollateralType
 
-    mapping (address => uint) public firstCDPID;     // Owner => First CDPId
-    mapping (address => uint) public lastCDPID;      // Owner => Last CDPId
-    mapping (address => uint) public cdpCount;       // Owner => Amount of CDPs
+    mapping (address => uint) public firstCDPID;         // Owner => First CDPId
+    mapping (address => uint) public lastCDPID;          // Owner => Last CDPId
+    mapping (address => uint) public cdpCount;           // Owner => Amount of CDPs
 
     mapping (
         address => mapping (
@@ -90,8 +62,6 @@ contract GebCdpManager is Logging {
             address => uint
         )
     ) public handlerCan;                        // CDP handler => Allowed Addr => True/False
-
-    RewardDistributorLike public rewardDistributor;
 
     struct List {
         uint prev;
@@ -120,7 +90,6 @@ contract GebCdpManager is Logging {
     }
 
     constructor(address cdpEngine_) public {
-        authorizedAccounts[msg.sender] = 1;
         cdpEngine = cdpEngine_;
     }
 
@@ -136,12 +105,6 @@ contract GebCdpManager is Logging {
     function toInt(uint x) internal pure returns (int y) {
         y = int(x);
         require(y >= 0);
-    }
-
-    // --- Administration ---
-    function modifyParameters(bytes32 parameter, address addr) external emitLog isAuthorized {
-        if (parameter == "rewardDistributor") rewardDistributor = RewardDistributorLike(addr);
-        else revert("modify-unrecognized-param");
     }
 
     // --- CDP Manipulation ---
@@ -324,15 +287,5 @@ contract GebCdpManager is Logging {
             deltaCollateral,
             deltaDebt
         );
-    }
-
-    // Claim rewards for good cdp management
-    function claimCDPManagementRewards(
-        uint cdp,
-        address lad
-    ) public emitLog cdpAllowed(cdp) {
-        address who = (lad != address(0)) ? lad : msg.sender;
-        require(rewardDistributor.claimCDPManagementRewards(collateralTypes[cdp], cdps[cdp], who) == true, "cannot-claim");
-        emit ClaimCDPManagementRewards(msg.sender, who, collateralTypes[cdp], cdps[cdp]);
     }
 }

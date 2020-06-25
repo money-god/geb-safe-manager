@@ -1,31 +1,7 @@
-pragma solidity ^0.5.15;
+pragma solidity ^0.6.7;
 
 import { GebDeployTestBase, CDPEngine, DSToken } from "geb-deploy/GebDeploy.t.base.sol";
 import "./GetCdps.sol";
-
-contract FakeRewardsDistributor {
-    address public token1;
-    address public token2;
-
-    uint256 public qty;
-
-    constructor(
-      address token1_,
-      address token2_,
-      uint256 qty_
-    ) public {
-        token1 = token1_;
-        token2 = token2_;
-        qty  = qty_;
-    }
-
-    function claimCDPManagementRewards(bytes32 collateralType, address cdp, address dst) external returns (bool) {
-        if (dst == address(0)) return false;
-        DSToken(token1).transfer(dst, qty);
-        DSToken(token2).transfer(dst, qty);
-        return true;
-    }
-}
 
 contract FakeUser {
     function doCdpAllow(
@@ -90,53 +66,12 @@ contract GebCdpManagerTest is GebDeployTestBase {
     DSToken   tkn1;
     DSToken   tkn2;
 
-    FakeRewardsDistributor rewardDistributor;
-
-    function setUp() public {
+    function setUp() override public {
         super.setUp();
         deployBond();
         manager = new GebCdpManager(address(cdpEngine));
         getCdps = new GetCdps();
         user = new FakeUser();
-
-        // Incentive system setup
-        tkn1 = new DSToken('ONE');
-        tkn2 = new DSToken('TWO');
-
-        rewardDistributor = new FakeRewardsDistributor(address(tkn1), address(tkn2), 1 ether);
-
-        tkn1.mint(100 ether);
-        tkn2.mint(100 ether);
-
-        tkn1.push(address(rewardDistributor), 100 ether);
-        tkn2.push(address(rewardDistributor), 100 ether);
-    }
-
-    function testModifyParams() public {
-        manager.modifyParameters("rewardDistributor", address(rewardDistributor));
-        assertTrue(address(manager.rewardDistributor()) == address(rewardDistributor));
-    }
-
-    function testClaimingZeroAddress() public {
-        manager.modifyParameters("rewardDistributor", address(rewardDistributor));
-
-        uint cdp = manager.openCDP("ETH", address(this));
-        manager.claimCDPManagementRewards(cdp, address(0));
-
-        assertEq(DSToken(rewardDistributor.token1()).balanceOf(address(this)), 1 ether);
-        assertEq(DSToken(rewardDistributor.token2()).balanceOf(address(this)), 1 ether);
-    }
-
-    function testClaimingOtherAddress() public {
-        address alice = address(0x1234);
-
-        manager.modifyParameters("rewardDistributor", address(rewardDistributor));
-
-        uint cdp = manager.openCDP("ETH", address(this));
-        manager.claimCDPManagementRewards(cdp, alice);
-
-        assertEq(DSToken(rewardDistributor.token1()).balanceOf(alice), 1 ether);
-        assertEq(DSToken(rewardDistributor.token2()).balanceOf(alice), 1 ether);
     }
 
     function testOpenCDP() public {
@@ -348,7 +283,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testModifyCDPCollateralization() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.modifyCDPCollateralization(cdp, 1 ether, 50 ether);
@@ -365,7 +300,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testFrobAllowed() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.allowCDP(cdp, address(user), 1);
@@ -375,7 +310,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testFailFrobNotAllowed() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         user.doModifyCDPCollateralization(manager, cdp, 1 ether, 50 ether);
@@ -383,7 +318,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testFrobGetCollateralBack() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.modifyCDPCollateralization(cdp, 1 ether, 50 ether);
@@ -414,7 +349,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testQuit() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.modifyCDPCollateralization(cdp, 1 ether, 50 ether);
@@ -438,7 +373,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testQuitOtherDst() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.modifyCDPCollateralization(cdp, 1 ether, 50 ether);
@@ -463,7 +398,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
 
     function testFailQuitOtherDst() public {
         uint cdp = manager.openCDP("ETH", address(this));
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(manager.cdps(cdp), 1 ether);
         manager.modifyCDPCollateralization(cdp, 1 ether, 50 ether);
@@ -480,7 +415,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testEnter() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
         cdpEngine.modifyCDPCollateralization("ETH", address(this), address(this), address(this), 1 ether, 50 ether);
@@ -507,7 +442,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testEnterOtherSrc() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
         user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
@@ -536,7 +471,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailEnterOtherSrc() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
         user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
@@ -548,7 +483,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailEnterOtherSrc2() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
         user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
@@ -560,7 +495,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testEnterOtherCdp() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
         cdpEngine.modifyCDPCollateralization("ETH", address(this), address(this), address(this), 1 ether, 50 ether);
@@ -589,7 +524,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailEnterOtherCdp() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
         cdpEngine.modifyCDPCollateralization("ETH", address(this), address(this), address(this), 1 ether, 50 ether);
@@ -601,7 +536,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailEnterOtherCdp2() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(this), 1 ether);
         cdpEngine.modifyCDPCollateralization("ETH", address(this), address(this), address(this), 1 ether, 50 ether);
@@ -613,7 +548,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testMove() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.openCDP("ETH", address(this));
         ethJoin.join(address(manager.cdps(cdpSrc)), 1 ether);
@@ -640,7 +575,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testMoveOtherCdpDst() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.openCDP("ETH", address(this));
         ethJoin.join(address(manager.cdps(cdpSrc)), 1 ether);
@@ -669,7 +604,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailMoveOtherCdpDst() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.openCDP("ETH", address(this));
         ethJoin.join(address(manager.cdps(cdpSrc)), 1 ether);
@@ -681,7 +616,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testMoveOtherCdpSrc() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.openCDP("ETH", address(this));
         ethJoin.join(address(manager.cdps(cdpSrc)), 1 ether);
@@ -710,7 +645,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
     }
 
     function testFailMoveOtherCdpSrc() public {
-        weth.deposit.value(1 ether)();
+        weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         uint cdpSrc = manager.openCDP("ETH", address(this));
         ethJoin.join(address(manager.cdps(cdpSrc)), 1 ether);
