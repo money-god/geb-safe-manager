@@ -69,7 +69,6 @@ contract GebCdpManager is Logging {
     }
 
     event NewCdp(address indexed usr, address indexed own, uint indexed cdp);
-    event ClaimCDPManagementRewards(address indexed usr, address indexed own, bytes32 collateralType, address cdp);
 
     modifier cdpAllowed(
         uint cdp
