@@ -56,10 +56,28 @@ contract FakeUser {
     ) public {
         cdpEngine.modifyCDPCollateralization(collateralType, cdp, collateralSource, debtDst, deltaCollateral, deltaDebt);
     }
+
+    function doProtectCDP(
+        GebCdpManager manager,
+        uint cdp,
+        address liquidationEngine,
+        address saviour
+    ) public {
+        manager.protectCDP(cdp, liquidationEngine, saviour);
+    }
+}
+
+contract LiquidationEngineMock {
+    mapping(bytes32 => mapping(address => address)) public chosenCDPSaviour;
+
+    function protectCDP(bytes32 collateralType, address cdp, address saviour) external {
+        chosenCDPSaviour[collateralType][cdp] = saviour;
+    }
 }
 
 contract GebCdpManagerTest is GebDeployTestBase {
     GebCdpManager manager;
+    LiquidationEngineMock liquidationEngineMock;
     GetCdps   getCdps;
     FakeUser  user;
 
@@ -70,6 +88,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
         super.setUp();
         deployBond();
         manager = new GebCdpManager(address(cdpEngine));
+        liquidationEngineMock = new LiquidationEngineMock();
         getCdps = new GetCdps();
         user = new FakeUser();
     }
@@ -654,5 +673,16 @@ contract GebCdpManagerTest is GebDeployTestBase {
         manager.transferCDPOwnership(cdpSrc, address(user));
 
         manager.moveCDP(cdpSrc, cdpDst);
+    }
+
+    function testProtectCDP() public {
+        uint cdp = manager.openCDP("ETH", address(this));
+        weth.deposit{value: 1 ether}();
+        weth.approve(address(ethJoin), 1 ether);
+        ethJoin.join(manager.cdps(cdp), 1 ether);
+        manager.allowCDP(cdp, address(user), 1);
+        user.doModifyCDPCollateralization(manager, cdp, 1 ether, 50 ether);
+        user.doProtectCDP(manager, cdp, address(liquidationEngineMock), address(0x1));
+        assertEq(liquidationEngineMock.chosenCDPSaviour("ETH", manager.cdps(cdp)), address(0x1));
     }
 }

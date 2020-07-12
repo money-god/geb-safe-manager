@@ -26,6 +26,10 @@ abstract contract CDPEngineLike {
     function transferCDPCollateralAndDebt(bytes32, address, address, int, int) virtual public;
 }
 
+abstract contract LiquidationEngineLike {
+    function protectCDP(bytes32, address, address) virtual external;
+}
+
 abstract contract CollateralLike {
     function transfer(address,uint) virtual external returns (bool);
     function transferFrom(address,address,uint) virtual external returns (bool);
@@ -285,6 +289,19 @@ contract GebCdpManager is Logging {
             cdps[cdpDst],
             deltaCollateral,
             deltaDebt
+        );
+    }
+
+    // Choose a CDP saviour inside LiquidationEngine for CDP with id 'cdp'
+    function protectCDP(
+        uint cdp,
+        address liquidationEngine,
+        address saviour
+    ) public emitLog cdpAllowed(cdp) {
+        LiquidationEngineLike(liquidationEngine).protectCDP(
+            collateralTypes[cdp],
+            cdps[cdp],
+            saviour
         );
     }
 }
