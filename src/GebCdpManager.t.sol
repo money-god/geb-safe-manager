@@ -45,7 +45,7 @@ contract FakeUser {
         cdpEngine.approveCDPModification(usr);
     }
 
-    function doCDPEngineFrob(
+    function doCDPEngineMOdifyCDPCollateralization(
         CDPEngine cdpEngine,
         bytes32 collateralType,
         address cdp,
@@ -84,9 +84,11 @@ contract GebCdpManagerTest is GebDeployTestBase {
     DSToken   tkn1;
     DSToken   tkn2;
 
+    bytes32 collateralAuctionType = bytes32("ENGLISH");
+
     function setUp() override public {
         super.setUp();
-        deployBond();
+        deployBond(collateralAuctionType);
         manager = new GebCdpManager(address(cdpEngine));
         liquidationEngineMock = new LiquidationEngineMock();
         getCdps = new GetCdps();
@@ -464,7 +466,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
         weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
-        user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
+        user.doCDPEngineMOdifyCDPCollateralization(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
 
         uint cdp = manager.openCDP("ETH", address(this));
 
@@ -493,7 +495,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
         weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
-        user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
+        user.doCDPEngineMOdifyCDPCollateralization(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
 
         uint cdp = manager.openCDP("ETH", address(this));
 
@@ -505,7 +507,7 @@ contract GebCdpManagerTest is GebDeployTestBase {
         weth.deposit{value: 1 ether}();
         weth.approve(address(ethJoin), 1 ether);
         ethJoin.join(address(user), 1 ether);
-        user.doCDPEngineFrob(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
+        user.doCDPEngineMOdifyCDPCollateralization(cdpEngine, "ETH", address(user), address(user), address(user), 1 ether, 50 ether);
 
         uint cdp = manager.openCDP("ETH", address(this));
 
