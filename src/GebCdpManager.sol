@@ -72,7 +72,70 @@ contract GebCdpManager is Logging {
         uint next;
     }
 
-    event NewCdp(address indexed usr, address indexed own, uint indexed cdp);
+    // --- Events ---
+    event AllowCDP(
+        address sender,
+        uint cdp,
+        address usr,
+        uint ok
+    );
+    event AllowHandler(
+        address sender,
+        address usr,
+        uint ok
+    );
+    event TransferCDPOwnership(
+        address sender,
+        uint cdp,
+        address dst
+    );
+    event NewCdp(address indexed sender, address indexed own, uint indexed cdp);
+    event ModifyCDPCollateralization(
+        address sender,
+        uint cdp,
+        int deltaCollateral,
+        int deltaDebt
+    );
+    event TransferCollateral(
+        address sender,
+        uint cdp,
+        address dst,
+        uint wad
+    );
+    event TransferCollateral(
+        address sender,
+        bytes32 collateralType,
+        uint cdp,
+        address dst,
+        uint wad
+    );
+    event TransferInternalCoins(
+        address sender,
+        uint cdp,
+        address dst,
+        uint rad
+    );
+    event QuitSystem(
+        address sender,
+        uint cdp,
+        address dst
+    );
+    event EnterSystem(
+        address sender,
+        address src,
+        uint cdp
+    );
+    event MoveCDP(
+        address sender,
+        uint cdpSrc,
+        uint cdpDst
+    );
+    event ProtectCDP(
+        address sender,
+        uint cdp,
+        address liquidationEngine,
+        address saviour
+    );
 
     modifier cdpAllowed(
         uint cdp
@@ -119,6 +182,12 @@ contract GebCdpManager is Logging {
         uint ok
     ) public cdpAllowed(cdp) {
         cdpCan[ownsCDP[cdp]][cdp][usr] = ok;
+        emit AllowCDP(
+            msg.sender,
+            cdp,
+            usr,
+            ok
+        );
     }
 
     // Allow/disallow a usr address to quit to the the sender handler
@@ -127,6 +196,11 @@ contract GebCdpManager is Logging {
         uint ok
     ) public {
         handlerCan[msg.sender][usr] = ok;
+        emit AllowHandler(
+            msg.sender,
+            usr,
+            ok
+        );
     }
 
     // Open a new cdp for a given usr address.
@@ -192,6 +266,12 @@ contract GebCdpManager is Logging {
         }
         lastCDPID[dst] = cdp;
         cdpCount[dst] = add(cdpCount[dst], 1);
+
+        emit TransferCDPOwnership(
+            msg.sender,
+            cdp,
+            dst
+        );
     }
 
     // Frob the cdp keeping the generated COIN or collateral freed in the cdp handler address.
@@ -209,6 +289,12 @@ contract GebCdpManager is Logging {
             deltaCollateral,
             deltaDebt
         );
+        emit ModifyCDPCollateralization(
+            msg.sender,
+            cdp,
+            deltaCollateral,
+            deltaDebt
+        );
     }
 
     // Transfer wad amount of cdp collateral from the cdp address to a dst address.
@@ -218,6 +304,12 @@ contract GebCdpManager is Logging {
         uint wad
     ) public emitLog cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferCollateral(collateralTypes[cdp], cdps[cdp], dst, wad);
+        emit TransferCollateral(
+            msg.sender,
+            cdp,
+            dst,
+            wad
+        );
     }
 
     // Transfer wad amount of any type of collateral (collateralType) from the cdp address to a dst address.
@@ -229,6 +321,13 @@ contract GebCdpManager is Logging {
         uint wad
     ) public emitLog cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferCollateral(collateralType, cdps[cdp], dst, wad);
+        emit TransferCollateral(
+            msg.sender,
+            collateralType,
+            cdp,
+            dst,
+            wad
+        );
     }
 
     // Transfer rad amount of COIN from the cdp address to a dst address.
@@ -238,6 +337,12 @@ contract GebCdpManager is Logging {
         uint rad
     ) public emitLog cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferInternalCoins(cdps[cdp], dst, rad);
+        emit TransferInternalCoins(
+            msg.sender,
+            cdp,
+            dst,
+            rad
+        );
     }
 
     // Quit the system, migrating the cdp (lockedCollateral, generatedDebt) to a different dst handler
@@ -255,6 +360,11 @@ contract GebCdpManager is Logging {
             deltaCollateral,
             deltaDebt
         );
+        emit QuitSystem(
+            msg.sender,
+            cdp,
+            dst
+        );
     }
 
     // Import a position from src handler to the handler owned by cdp
@@ -271,6 +381,11 @@ contract GebCdpManager is Logging {
             cdps[cdp],
             deltaCollateral,
             deltaDebt
+        );
+        emit EnterSystem(
+            msg.sender,
+            src,
+            cdp
         );
     }
 
@@ -290,6 +405,11 @@ contract GebCdpManager is Logging {
             deltaCollateral,
             deltaDebt
         );
+        emit MoveCDP(
+            msg.sender,
+            cdpSrc,
+            cdpDst
+        );
     }
 
     // Choose a CDP saviour inside LiquidationEngine for CDP with id 'cdp'
@@ -301,6 +421,12 @@ contract GebCdpManager is Logging {
         LiquidationEngineLike(liquidationEngine).protectCDP(
             collateralTypes[cdp],
             cdps[cdp],
+            saviour
+        );
+        emit ProtectCDP(
+            msg.sender,
+            cdp,
+            liquidationEngine,
             saviour
         );
     }
