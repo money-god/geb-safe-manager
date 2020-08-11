@@ -15,8 +15,6 @@
 
 pragma solidity ^0.6.7;
 
-import { Logging } from "geb/Logging.sol";
-
 abstract contract CDPEngineLike {
     function cdps(bytes32, address) virtual public view returns (uint, uint);
     function approveCDPModification(address) virtual public;
@@ -41,7 +39,7 @@ contract CDPHandler {
     }
 }
 
-contract GebCdpManager is Logging {
+contract GebCdpManager {
     address                   public cdpEngine;
     uint                      public cdpi;               // Auto incremental
     mapping (uint => address) public cdps;               // CDPId => CDPHandler
@@ -89,7 +87,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         address dst
     );
-    event NewCdp(address indexed sender, address indexed own, uint indexed cdp);
+    event OpenCdp(address indexed sender, address indexed own, uint indexed cdp);
     event ModifyCDPCollateralization(
         address sender,
         uint cdp,
@@ -207,7 +205,7 @@ contract GebCdpManager is Logging {
     function openCDP(
         bytes32 collateralType,
         address usr
-    ) public emitLog returns (uint) {
+    ) public returns (uint) {
         require(usr != address(0), "usr-address-0");
 
         cdpi = add(cdpi, 1);
@@ -226,7 +224,7 @@ contract GebCdpManager is Logging {
         lastCDPID[usr] = cdpi;
         cdpCount[usr] = add(cdpCount[usr], 1);
 
-        emit NewCdp(msg.sender, usr, cdpi);
+        emit OpenCdp(msg.sender, usr, cdpi);
         return cdpi;
     }
 
@@ -234,7 +232,7 @@ contract GebCdpManager is Logging {
     function transferCDPOwnership(
         uint cdp,
         address dst
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         require(dst != address(0), "dst-address-0");
         require(dst != ownsCDP[cdp], "dst-already-owner");
 
@@ -279,7 +277,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         int deltaCollateral,
         int deltaDebt
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         address cdpHandler = cdps[cdp];
         CDPEngineLike(cdpEngine).modifyCDPCollateralization(
             collateralTypes[cdp],
@@ -302,7 +300,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         address dst,
         uint wad
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferCollateral(collateralTypes[cdp], cdps[cdp], dst, wad);
         emit TransferCollateral(
             msg.sender,
@@ -319,7 +317,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         address dst,
         uint wad
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferCollateral(collateralType, cdps[cdp], dst, wad);
         emit TransferCollateral(
             msg.sender,
@@ -335,7 +333,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         address dst,
         uint rad
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         CDPEngineLike(cdpEngine).transferInternalCoins(cdps[cdp], dst, rad);
         emit TransferInternalCoins(
             msg.sender,
@@ -349,7 +347,7 @@ contract GebCdpManager is Logging {
     function quitSystem(
         uint cdp,
         address dst
-    ) public emitLog cdpAllowed(cdp) handlerAllowed(dst) {
+    ) public cdpAllowed(cdp) handlerAllowed(dst) {
         (uint lockedCollateral, uint generatedDebt) = CDPEngineLike(cdpEngine).cdps(collateralTypes[cdp], cdps[cdp]);
         int deltaCollateral = toInt(lockedCollateral);
         int deltaDebt = toInt(generatedDebt);
@@ -371,7 +369,7 @@ contract GebCdpManager is Logging {
     function enterSystem(
         address src,
         uint cdp
-    ) public emitLog handlerAllowed(src) cdpAllowed(cdp) {
+    ) public handlerAllowed(src) cdpAllowed(cdp) {
         (uint lockedCollateral, uint generatedDebt) = CDPEngineLike(cdpEngine).cdps(collateralTypes[cdp], src);
         int deltaCollateral = toInt(lockedCollateral);
         int deltaDebt = toInt(generatedDebt);
@@ -393,7 +391,7 @@ contract GebCdpManager is Logging {
     function moveCDP(
         uint cdpSrc,
         uint cdpDst
-    ) public emitLog cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
+    ) public cdpAllowed(cdpSrc) cdpAllowed(cdpDst) {
         require(collateralTypes[cdpSrc] == collateralTypes[cdpDst], "non-matching-cdps");
         (uint lockedCollateral, uint generatedDebt) = CDPEngineLike(cdpEngine).cdps(collateralTypes[cdpSrc], cdps[cdpSrc]);
         int deltaCollateral = toInt(lockedCollateral);
@@ -417,7 +415,7 @@ contract GebCdpManager is Logging {
         uint cdp,
         address liquidationEngine,
         address saviour
-    ) public emitLog cdpAllowed(cdp) {
+    ) public cdpAllowed(cdp) {
         LiquidationEngineLike(liquidationEngine).protectCDP(
             collateralTypes[cdp],
             cdps[cdp],
