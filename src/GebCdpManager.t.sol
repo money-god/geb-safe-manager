@@ -1,6 +1,6 @@
 pragma solidity ^0.6.7;
 
-import { GebDeployTestBase, CDPEngine, DSToken } from "geb-deploy/GebDeploy.t.base.sol";
+import { GebDeployTestBase, CDPEngine, DSToken } from "geb-deploy/test/GebDeploy.t.base.sol";
 import "./GetCdps.sol";
 
 contract FakeUser {
