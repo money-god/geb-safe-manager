@@ -15,39 +15,39 @@
 
 pragma solidity ^0.6.7;
 
-import "./GebCdpManager.sol";
+import "./GebSafeManager.sol";
 
-contract GetCdps {
-    function getCdpsAsc(address manager, address guy) external view returns (uint[] memory ids, address[] memory cdps, bytes32[] memory collateralTypes) {
-        uint count = GebCdpManager(manager).cdpCount(guy);
+contract GetSafes {
+    function getSafesAsc(address manager, address guy) external view returns (uint[] memory ids, address[] memory safes, bytes32[] memory collateralTypes) {
+        uint count = GebSafeManager(manager).safeCount(guy);
         ids = new uint[](count);
-        cdps = new address[](count);
+        safes = new address[](count);
         collateralTypes = new bytes32[](count);
         uint i = 0;
-        uint id = GebCdpManager(manager).firstCDPID(guy);
+        uint id = GebSafeManager(manager).firstSAFEID(guy);
 
         while (id > 0) {
             ids[i] = id;
-            cdps[i] = GebCdpManager(manager).cdps(id);
-            collateralTypes[i] = GebCdpManager(manager).collateralTypes(id);
-            (,id) = GebCdpManager(manager).cdpList(id);
+            safes[i] = GebSafeManager(manager).safes(id);
+            collateralTypes[i] = GebSafeManager(manager).collateralTypes(id);
+            (,id) = GebSafeManager(manager).safeList(id);
             i++;
         }
     }
 
-    function getCdpsDesc(address manager, address guy) external view returns (uint[] memory ids, address[] memory cdps, bytes32[] memory collateralTypes) {
-        uint count = GebCdpManager(manager).cdpCount(guy);
+    function getSafesDesc(address manager, address guy) external view returns (uint[] memory ids, address[] memory safes, bytes32[] memory collateralTypes) {
+        uint count = GebSafeManager(manager).safeCount(guy);
         ids = new uint[](count);
-        cdps = new address[](count);
+        safes = new address[](count);
         collateralTypes = new bytes32[](count);
         uint i = 0;
-        uint id = GebCdpManager(manager).lastCDPID(guy);
+        uint id = GebSafeManager(manager).lastSAFEID(guy);
 
         while (id > 0) {
             ids[i] = id;
-            cdps[i] = GebCdpManager(manager).cdps(id);
-            collateralTypes[i] = GebCdpManager(manager).collateralTypes(id);
-            (id,) = GebCdpManager(manager).cdpList(id);
+            safes[i] = GebSafeManager(manager).safes(id);
+            collateralTypes[i] = GebSafeManager(manager).collateralTypes(id);
+            (id,) = GebSafeManager(manager).safeList(id);
             i++;
         }
     }
