@@ -88,7 +88,7 @@ contract GebSafeManagerTest is GebDeployTestBase {
 
     function setUp() override public {
         super.setUp();
-        deployBond(collateralAuctionType);
+        deployIndex(collateralAuctionType);
         manager = new GebSafeManager(address(safeEngine));
         liquidationEngineMock = new LiquidationEngineMock();
         getSafes = new GetSafes();
