@@ -183,7 +183,7 @@ contract GebSafeManager {
         );
     }
 
-    // Allow/disallow a usr address to quit to the the sender handler
+    // Allow/disallow a usr address to quit to the sender handler
     function allowHandler(
         address usr,
         uint ok
