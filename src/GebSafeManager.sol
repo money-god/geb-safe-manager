@@ -28,11 +28,6 @@ abstract contract LiquidationEngineLike {
     function protectSAFE(bytes32, address, address) virtual external;
 }
 
-abstract contract CollateralLike {
-    function transfer(address,uint) virtual external returns (bool);
-    function transferFrom(address,address,uint) virtual external returns (bool);
-}
-
 contract SAFEHandler {
     constructor(address safeEngine) public {
         SAFEEngineLike(safeEngine).approveSAFEModification(msg.sender);
