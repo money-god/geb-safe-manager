@@ -267,7 +267,7 @@ contract GebSafeManager {
         );
     }
 
-    // Frob the safe keeping the generated COIN or collateral freed in the safe handler address.
+    // Modify a SAFE's collateralization ratio while keeping the generated COIN or collateral freed in the SAFE handler address.
     function modifySAFECollateralization(
         uint safe,
         int deltaCollateral,
