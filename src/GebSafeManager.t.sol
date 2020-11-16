@@ -1,4 +1,4 @@
-pragma solidity ^0.6.7;
+pragma solidity 0.6.7;
 
 import { GebDeployTestBase, SAFEEngine, DSToken } from "geb-deploy/test/GebDeploy.t.base.sol";
 import "./GetSafes.sol";
