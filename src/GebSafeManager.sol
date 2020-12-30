@@ -405,7 +405,7 @@ contract GebSafeManager {
         );
     }
 
-    // Choose a SAFE saviour inside LiquidationEngine for SAFE with id 'safe'
+    // Choose a SAFE saviour inside LiquidationEngine for the SAFE with id 'safe'
     function protectSAFE(
         uint safe,
         address liquidationEngine,
