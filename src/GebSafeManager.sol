@@ -235,12 +235,12 @@ contract GebSafeManager {
         if (safeList[safe].prev != 0) {
             safeList[safeList[safe].prev].next = safeList[safe].next;    // Set the next pointer of the prev safe (if exists) to the next of the transferred one
         }
-        if (safeList[safe].next != 0) {                               // If wasn't the last one
+        if (safeList[safe].next != 0) {                                  // If wasn't the last one
             safeList[safeList[safe].next].prev = safeList[safe].prev;    // Set the prev pointer of the next safe to the prev of the transferred one
-        } else {                                                    // If was the last one
+        } else {                                                         // If was the last one
             lastSAFEID[ownsSAFE[safe]] = safeList[safe].prev;            // Update last pointer of the owner
         }
-        if (firstSAFEID[ownsSAFE[safe]] == safe) {                      // If was the first one
+        if (firstSAFEID[ownsSAFE[safe]] == safe) {                       // If was the first one
             firstSAFEID[ownsSAFE[safe]] = safeList[safe].next;           // Update first pointer of the owner
         }
         safeCount[ownsSAFE[safe]] = sub(safeCount[ownsSAFE[safe]], 1);
