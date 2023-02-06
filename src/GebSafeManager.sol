@@ -28,6 +28,10 @@ abstract contract LiquidationEngineLike {
     function protectSAFE(bytes32, address, address) virtual external;
 }
 
+abstract contract DebtRewardsLike {
+    function getRewards(address, address) virtual external;
+}
+
 contract SAFEHandler {
     constructor(address safeEngine) public {
         SAFEEngineLike(safeEngine).approveSAFEModification(msg.sender);
@@ -129,6 +133,11 @@ contract GebSafeManager {
         address liquidationEngine,
         address saviour
     );
+    event CollectRewards(
+        address sender,
+        uint safe,
+        address rewards
+    );    
 
     modifier safeAllowed(
         uint safe
@@ -423,4 +432,17 @@ contract GebSafeManager {
             saviour
         );
     }
+
+    // Collect debtRewards from the id `safe`
+    function collectRewards(
+        uint safe,
+        address debtRewards
+    ) public safeAllowed(safe) {
+        DebtRewardsLike(debtRewards).getRewards(safes[safei], msg.sender);
+        emit CollectRewards(
+            msg.sender,
+            safe,
+            debtRewards
+        );        
+    }    
 }
