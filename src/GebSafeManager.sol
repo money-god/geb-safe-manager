@@ -438,7 +438,7 @@ contract GebSafeManager {
         uint safe,
         address debtRewards
     ) public safeAllowed(safe) {
-        DebtRewardsLike(debtRewards).getRewards(safes[safei], msg.sender);
+        DebtRewardsLike(debtRewards).getRewards(safes[safe], msg.sender);
         emit CollectRewards(
             msg.sender,
             safe,
